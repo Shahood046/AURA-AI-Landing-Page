@@ -21,8 +21,8 @@ export function ThemeLandingPage() {
       
       {/* --- NAVBAR --- */}
       <nav className="fixed top-4 left-0 right-0 px-8 lg:px-16 z-50 flex items-center justify-between">
-        <div className="w-12 h-12 rounded-full liquid-glass flex items-center justify-center pointer-events-auto cursor-pointer">
-          <span className="font-heading italic text-2xl lowercase mt-1">a</span>
+        <div className="w-32 h-12 rounded-full liquid-glass flex items-center justify-center pointer-events-auto cursor-pointer">
+          <span className="font-heading italic text-xl tracking-wider mt-1">AURA-AI</span>
         </div>
         
         <div className="hidden md:flex liquid-glass rounded-full px-1.5 py-1.5 items-center pointer-events-auto">
@@ -40,7 +40,7 @@ export function ThemeLandingPage() {
           </button>
         </div>
 
-        <div className="w-12 h-12 invisible" aria-hidden="true" />
+        <div className="w-32 h-12 invisible" aria-hidden="true" />
       </nav>
 
       {/* --- SECTION 1: HERO --- */}
@@ -116,7 +116,7 @@ export function ThemeLandingPage() {
                 <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
               </svg>
               <div className="mt-4">
-                <div className="font-heading italic text-white text-3xl tracking-[-1px] leading-none">8,432+</div>
+                <div className="font-heading italic text-white text-3xl tracking-[-1px] leading-none">15,000+</div>
                 <div className="text-[11px] text-white/70 font-body mt-1 uppercase tracking-wider">Active Orbiting Satellites</div>
               </div>
             </div>

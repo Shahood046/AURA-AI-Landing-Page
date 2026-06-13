@@ -66,9 +66,9 @@ const RING_RADII = [18, 30, 42, 54]; // percentage of container half-size
 
 /* ── component ───────────────────────────────────────────────── */
 export function SatelliteTrackingSection() {
-  /* animated counter 0 → 8432 */
+  /* animated counter 0 → 15000 */
   const [count, setCount] = useState(0);
-  const TARGET = 8432;
+  const TARGET = 15000;
 
   useEffect(() => {
     let frame: number;
@@ -115,7 +115,7 @@ export function SatelliteTrackingSection() {
       totalSections={10}
       label="Orbital Awareness"
       title="Satellite Tracking System"
-      description="Track 8,000+ active satellites in real-time. Monitor orbital positions, speeds, altitudes, and TLE data across LEO, MEO, and GEO orbits with sub-second refresh rates."
+      description="Track 15,000+ active satellites in real-time. Monitor orbital positions, speeds, altitudes, and TLE data across LEO, MEO, and GEO orbits with sub-second refresh rates."
       accentColor={ACCENT}
     >
       {/* ───── Main Layout ───── */}

@@ -92,7 +92,7 @@ export function FooterCTA() {
   }, []);
 
   const stats = [
-    '8,432+ Satellites',
+    '15,000+ Satellites',
     '24/7 Monitoring',
     'Real-time Data',
     'AI Powered',
