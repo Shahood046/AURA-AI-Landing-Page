@@ -179,7 +179,18 @@ export function LaunchMonitoringSection() {
           </div>
 
           {/* ── CENTER: Rocket + Countdown ── */}
-          <div className="lg:col-span-5 relative flex flex-col items-center justify-center py-12 min-h-[420px]">
+          <motion.div 
+            className="lg:col-span-5 relative flex flex-col items-center justify-center py-12 min-h-[420px] overflow-hidden"
+            animate={phase === 'flight' ? {
+              x: [0, -1, 1, -0.5, 0.5, 0],
+              y: [0, 0.5, -0.5, 0.3, -0.3, 0],
+            } : {}}
+            transition={{
+              duration: 0.12,
+              repeat: Infinity,
+              ease: 'linear'
+            }}
+          >
             {/* Countdown */}
             <motion.div
               className="absolute top-6 left-1/2 -translate-x-1/2 text-center z-20"
@@ -195,65 +206,65 @@ export function LaunchMonitoringSection() {
               </div>
             </motion.div>
 
-            {/* Rocket SVG with thrust */}
+            {/* Launch Tower (Slides down during flight to simulate ascent) */}
+            <motion.div 
+              className="absolute left-[calc(50%-55px)] bottom-12 w-6 h-[170px] border-r border-t border-white/10 bg-[linear-gradient(45deg,transparent_45%,rgba(255,255,255,0.03)_50%,transparent_55%)] bg-[size:10px_10px] opacity-30 z-0 pointer-events-none"
+              animate={phase === 'flight' ? { y: [0, 300], opacity: [0.3, 0] } : { y: 0, opacity: 0.3 }}
+              transition={phase === 'flight' ? { duration: 12, ease: 'easeIn' } : { duration: 0.5 }}
+            >
+              <div className="absolute top-2 right-[-2.5px] w-1 h-1 bg-red-500 rounded-full animate-ping" />
+              <div className="absolute top-20 right-[-2.5px] w-1 h-1 bg-red-500 rounded-full animate-ping" />
+            </motion.div>
+
+            {/* Rocket Image with thrust */}
             <motion.div
-              className="relative z-10"
-              animate={phase === 'flight' ? { y: [0, -20, 0] } : {}}
+              className="relative z-10 flex flex-col items-center justify-end h-[220px]"
+              animate={phase === 'flight' ? { y: [0, -12, 0] } : {}}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <svg width="80" height="200" viewBox="0 0 80 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Nosecone */}
-                <path d="M40 10 L28 55 L52 55 Z" fill="#e2e8f0" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                {/* Upper body */}
-                <rect x="28" y="55" width="24" height="70" rx="2" fill="#cbd5e1" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-                {/* Accent stripe */}
-                <rect x="28" y="80" width="24" height="8" fill={ACCENT} opacity="0.9" />
-                {/* Window */}
-                <circle cx="40" cy="70" r="4" fill="#1e293b" stroke={ACCENT} strokeWidth="1" opacity="0.7" />
-                {/* Lower body / interstage */}
-                <rect x="26" y="125" width="28" height="35" rx="1" fill="#94a3b8" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                {/* Left fin */}
-                <path d="M26 140 L14 168 L26 160 Z" fill="#64748b" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                {/* Right fin */}
-                <path d="M54 140 L66 168 L54 160 Z" fill="#64748b" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                {/* Nozzle */}
-                <path d="M30 160 L26 175 L54 175 L50 160 Z" fill="#475569" />
-              </svg>
+              <img
+                src="/realistic_rocket_cutout.png"
+                className="h-[180px] w-auto object-contain select-none pointer-events-none"
+                alt="Falcon 9 Rocket"
+              />
 
               {/* Animated thrust flames */}
               {phase === 'flight' && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                <div className="absolute bottom-[2px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
                   {/* Inner flame (white-hot) */}
                   <motion.div
-                    className="w-4 rounded-b-full bg-gradient-to-b from-white via-yellow-300 to-transparent"
-                    animate={{ height: [18, 30, 22, 28, 18], opacity: [0.9, 1, 0.8, 1, 0.9] }}
-                    transition={{ duration: 0.15, repeat: Infinity }}
+                    className="w-3 rounded-b-full bg-gradient-to-b from-white via-yellow-200 to-transparent"
+                    style={{ filter: 'blur(1px)' }}
+                    animate={{ height: [15, 28, 18, 25, 15], opacity: [0.9, 1, 0.8, 1, 0.9] }}
+                    transition={{ duration: 0.1, repeat: Infinity }}
                   />
                   {/* Outer flame (orange) */}
                   <motion.div
-                    className="absolute top-0 w-8 rounded-b-full bg-gradient-to-b from-orange-400/80 via-[#ff6b35]/60 to-transparent"
-                    animate={{ height: [28, 50, 35, 48, 28], opacity: [0.7, 0.9, 0.6, 0.85, 0.7] }}
-                    transition={{ duration: 0.18, repeat: Infinity }}
+                    className="absolute top-0 w-6 rounded-b-full bg-gradient-to-b from-orange-400 via-[#ff6b35] to-transparent"
+                    style={{ filter: 'blur(2px)', mixBlendMode: 'screen' }}
+                    animate={{ height: [25, 45, 30, 42, 25], opacity: [0.8, 1, 0.7, 0.95, 0.8] }}
+                    transition={{ duration: 0.12, repeat: Infinity }}
                   />
-                  {/* Widest plume */}
+                  {/* Glowing Plume Halo */}
                   <motion.div
-                    className="absolute top-2 w-12 rounded-b-full bg-gradient-to-b from-red-500/30 via-orange-600/10 to-transparent"
-                    animate={{ height: [40, 70, 50, 65, 40], opacity: [0.4, 0.6, 0.3, 0.55, 0.4] }}
+                    className="absolute top-[-5px] w-12 h-16 rounded-full bg-orange-600/30"
+                    style={{ filter: 'blur(10px)', mixBlendMode: 'screen' }}
+                    animate={{ scale: [0.9, 1.1, 0.95, 1.05, 0.9] }}
                     transition={{ duration: 0.2, repeat: Infinity }}
                   />
                   {/* Smoke particles */}
-                  {[...Array(5)].map((_, i) => (
+                  {[...Array(6)].map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute rounded-full bg-white/10"
-                      style={{ width: 4 + i * 2, height: 4 + i * 2 }}
+                      className="absolute rounded-full bg-white/5 border border-white/5"
+                      style={{ width: 8 + i * 4, height: 8 + i * 4, filter: 'blur(3px)' }}
                       animate={{
-                        y: [30, 80 + i * 20],
-                        x: [0, (i % 2 === 0 ? 1 : -1) * (8 + i * 4)],
-                        opacity: [0.3, 0],
-                        scale: [1, 2.5],
+                        y: [15, 80 + i * 15],
+                        x: [0, (i % 2 === 0 ? 1 : -1) * (12 + i * 5)],
+                        opacity: [0.4, 0],
+                        scale: [1, 3.2],
                       }}
-                      transition={{ duration: 1.2 + i * 0.3, repeat: Infinity, delay: i * 0.2 }}
+                      transition={{ duration: 1.0 + i * 0.25, repeat: Infinity, delay: i * 0.15, ease: 'easeOut' }}
                     />
                   ))}
                 </div>
@@ -262,7 +273,7 @@ export function LaunchMonitoringSection() {
               {/* Pre-launch: idle glow at nozzle */}
               {phase === 'prelaunch' && (
                 <motion.div
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-3 rounded-b-full"
+                  className="absolute bottom-[2px] left-1/2 -translate-x-1/2 w-6 h-3 rounded-b-full"
                   style={{ backgroundColor: `${ACCENT}40` }}
                   animate={{ opacity: [0.3, 0.6, 0.3] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -270,11 +281,15 @@ export function LaunchMonitoringSection() {
               )}
             </motion.div>
 
-            {/* Launch pad base */}
-            <div className="relative mt-1 z-0">
+            {/* Launch pad base (Slides down during flight to simulate ascent) */}
+            <motion.div 
+              className="relative mt-1 z-0"
+              animate={phase === 'flight' ? { y: [0, 250], opacity: [1, 0] } : { y: 0, opacity: 1 }}
+              transition={phase === 'flight' ? { duration: 8, ease: 'easeIn' } : { duration: 0.5 }}
+            >
               <div className="w-32 h-[3px] rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <div className="w-24 h-[2px] mx-auto mt-1 rounded-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            </div>
+            </motion.div>
 
             {/* Phase label */}
             <motion.div
@@ -289,7 +304,7 @@ export function LaunchMonitoringSection() {
             >
               {phase === 'prelaunch' ? 'Awaiting Ignition' : 'Powered Flight'}
             </motion.div>
-          </div>
+          </motion.div>
 
           {/* ── RIGHT: Telemetry + Upcoming ── */}
           <div className="lg:col-span-5 border-l border-white/5 p-5 flex flex-col gap-5">
