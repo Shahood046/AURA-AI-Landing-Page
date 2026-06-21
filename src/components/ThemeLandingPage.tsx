@@ -24,23 +24,6 @@ export function ThemeLandingPage() {
         <div className="w-32 h-12 rounded-full liquid-glass flex items-center justify-center pointer-events-auto cursor-pointer">
           <span className="font-heading italic text-xl tracking-wider mt-1">AURA-AI</span>
         </div>
-        
-        <div className="hidden md:flex liquid-glass rounded-full px-1.5 py-1.5 items-center pointer-events-auto">
-          {["Overview", "Live Globe", "Intelligence", "Platform", "Datacube"].map((link) => (
-            <a key={link} href={`#${link.toLowerCase()}`} className="px-3 py-2 text-sm font-medium text-white/90 font-body hover:text-white transition-colors">
-              {link}
-            </a>
-          ))}
-          <button className="ml-2 bg-white text-black rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-1 hover:bg-white/90 transition-colors whitespace-nowrap">
-            Launch App
-            <svg className="w-4 h-4 ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17L17 7" />
-              <path d="M7 7h10v10" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="w-32 h-12 invisible" aria-hidden="true" />
       </nav>
 
       {/* --- SECTION 1: HERO --- */}
@@ -95,32 +78,6 @@ export function ThemeLandingPage() {
             </button>
           </motion.div>
 
-          <motion.div
-            initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
-            animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 1.3 }}
-            className="flex flex-col sm:flex-row items-stretch justify-start gap-4 mt-8 w-full max-w-md pointer-events-auto"
-          >
-            <div className="liquid-glass rounded-[1.25rem] p-4 w-[220px] flex flex-col">
-              <svg className="w-6 h-6 text-white/80 mb-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
-              <div className="mt-4">
-                <div className="font-heading italic text-white text-3xl tracking-[-1px] leading-none">24/7</div>
-                <div className="text-[11px] text-white/70 font-body mt-1 uppercase tracking-wider">Live Asset Tracking</div>
-              </div>
-            </div>
-            
-            <div className="liquid-glass rounded-[1.25rem] p-4 w-[220px] flex flex-col">
-              <svg className="w-6 h-6 text-white/80 mb-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
-              </svg>
-              <div className="mt-4">
-                <div className="font-heading italic text-white text-3xl tracking-[-1px] leading-none">15,000+</div>
-                <div className="text-[11px] text-white/70 font-body mt-1 uppercase tracking-wider">Active Orbiting Satellites</div>
-              </div>
-            </div>
-          </motion.div>
         </div>
 
         <motion.div
