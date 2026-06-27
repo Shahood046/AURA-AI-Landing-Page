@@ -80,23 +80,6 @@ export function ThemeLandingPage() {
 
         </div>
 
-        <motion.div
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ duration: 1, delay: 1.4 }}
-           className="relative z-10 flex flex-col items-center gap-5 pb-10"
-        >
-          <div className="liquid-glass rounded-full px-4 py-1.5 text-xs font-medium text-white">
-            Collaborating with top aerospace pioneers globally
-          </div>
-          <div className="flex items-center gap-10 md:gap-16 font-heading italic text-white text-2xl md:text-3xl tracking-tight leading-none text-white/90 cursor-default">
-            <span>Aeon</span>
-            <span>Vela</span>
-            <span>Apex</span>
-            <span>Orbit</span>
-            <span>Zeno</span>
-          </div>
-        </motion.div>
 
         {/* Gradient fade to blend into the next section */}
         <div className="absolute bottom-0 w-full h-32 bg-gradient-to-t from-black to-transparent z-0 pointer-events-none" />

@@ -22,8 +22,6 @@ export function SectionWrapper({
   accentColor,
   children
 }: SectionWrapperProps) {
-  const progressText = `${String(index).padStart(2, '0')} / ${totalSections}`;
-
   return (
     <section id={id} className="relative w-full min-h-screen py-32 overflow-hidden bg-black">
       {/* Background Glow */}
@@ -43,18 +41,6 @@ export function SectionWrapper({
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="mb-16 md:mb-24"
         >
-          {/* Section Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <span className="text-xs font-mono text-white/50 tracking-widest">{progressText}</span>
-            <div className="h-[1px] w-12 bg-white/20" />
-            <span 
-              className="text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border border-white/10"
-              style={{ color: accentColor, backgroundColor: `${accentColor}15`, borderColor: `${accentColor}30` }}
-            >
-              {label}
-            </span>
-          </div>
-
           <h2 className="text-5xl md:text-7xl font-heading italic text-white leading-tight max-w-4xl tracking-tight mb-6">
             {title}
           </h2>
