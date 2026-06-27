@@ -1,506 +1,302 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Flame,
-  Droplets,
-  Mountain,
-  Zap,
-  CloudLightning,
-  AlertTriangle,
-  MapPin,
-  Activity,
-  Shield,
-  Radio,
-} from 'lucide-react';
-import { SectionWrapper } from './SectionWrapper';
+import * as THREE from 'three';
+import { Flame, Wind, Waves, Mountain, Zap, CloudRain, Thermometer, AlertTriangle } from 'lucide-react';
 
-/* ─── disaster type config ─── */
-interface DisasterType {
-  label: string;
-  color: string;
-  icon: React.ReactNode;
+// All events placed safely inland to align correctly with the 3D globe texture
+const EVENTS = [
+  { id: 0, Icon: CloudRain,     label: 'Cyclone Warning',    time: '6 min ago',  color: '#67e8f9', lat:  23.5, lon:  90.4 }, // Bangladesh (Dhaka)
+  { id: 1, Icon: Mountain,      label: 'Volcanic Activity',  time: '31 min ago', color: '#f87171', lat:  -7.5, lon: 110.4 }, // Java, Indonesia (Mt. Merapi)
+  { id: 2, Icon: Waves,         label: 'Flood Warning',      time: '15 min ago', color: '#818cf8', lat:  25.9, lon:  68.4 }, // Pakistan (Sindh)
+  { id: 3, Icon: Thermometer,   label: 'Extreme Heatwave',   time: '1 hr ago',   color: '#fb923c', lat:  27.0, lon:  73.0 }, // India (Rajasthan)
+  { id: 4, Icon: Zap,           label: 'Earthquake M6.4',    time: '44 min ago', color: '#facc15', lat:  37.6, lon:  36.9 }, // Turkey (Kahramanmaraş)
+  { id: 5, Icon: AlertTriangle, label: 'Flash Flood Alert',  time: '22 min ago', color: '#a78bfa', lat: -15.8, lon: -47.9 }, // Brazil (Brasilia)
+  { id: 6, Icon: Wind,          label: 'Hurricane Landfall', time: '8 min ago',  color: '#38bdf8', lat:  33.0, lon: -87.0 }, // Alabama, USA (Inland)
+  { id: 7, Icon: Flame,         label: 'Wildfire Detected',  time: '2 min ago',  color: '#f97316', lat:  38.0, lon:-120.0 }, // California, USA (Sierra Nevada)
+  { id: 8, Icon: AlertTriangle, label: 'Landslide Alert',    time: '12 min ago', color: '#fb7185', lat: -15.0, lon: -70.0 }, // Peru (Andes)
+  { id: 9, Icon: Wind,          label: 'Severe Dust Storm',  time: '50 min ago', color: '#fb923c', lat:  25.0, lon:  15.0 }, // Libya (Sahara Desert)
+  { id: 10, Icon: CloudRain,    label: 'Blizzard Warning',   time: '40 min ago', color: '#38bdf8', lat:  60.0, lon: 100.0 }, // Russia (Siberia)
+  { id: 11, Icon: Flame,        label: 'Bushfire Warning',   time: '5 min ago',  color: '#f97316', lat: -25.0, lon: 134.0 }, // Australia (Outback)
+  { id: 12, Icon: Waves,        label: 'River Flooding',     time: '18 min ago', color: '#818cf8', lat:  48.8, lon:   2.3 }, // France (Paris)
+  { id: 13, Icon: Mountain,     label: 'Volcanic Plume',     time: '25 min ago', color: '#f87171', lat:  65.0, lon: -18.0 }, // Iceland (Inland)
+] as const;
+
+// Helper to format lat/lon as readable coordinates
+function getCoordinateString(lat: number, lon: number) {
+  const latDir = lat >= 0 ? 'N' : 'S';
+  const lonDir = lon >= 0 ? 'E' : 'W';
+  return `${Math.abs(lat).toFixed(4)}° ${latDir}, ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
 }
 
-const DISASTER_TYPES: Record<string, DisasterType> = {
-  wildfire:   { label: 'Wildfire',    color: '#f97316', icon: <Flame size={14} /> },
-  flood:      { label: 'Flood',       color: '#3b82f6', icon: <Droplets size={14} /> },
-  earthquake: { label: 'Earthquake',  color: '#ef4444', icon: <Zap size={14} /> },
-  volcano:    { label: 'Volcano',     color: '#a855f7', icon: <Mountain size={14} /> },
-  storm:      { label: 'Storm',       color: '#06b6d4', icon: <CloudLightning size={14} /> },
-};
-
-/* ─── alert data ─── */
-interface AlertItem {
-  id: number;
-  type: keyof typeof DISASTER_TYPES;
-  name: string;
-  severity: 'Critical' | 'High' | 'Medium';
-  location: string;
-  time: string;
+// Correct Three.js sphere lat/lon → local 3D position
+// Matches the exact vertex calculation formula of Three.js SphereGeometry:
+// x = -R * cos(theta) * sin(phi)
+// y = R * cos(phi)
+// z = R * sin(theta) * sin(phi)
+function latLonTo3D(lat: number, lon: number, R: number): THREE.Vector3 {
+  const phi   = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+     -R * Math.cos(theta) * Math.sin(phi),
+      R * Math.cos(phi),
+      R * Math.sin(theta) * Math.sin(phi)
+  );
 }
 
-const ALERT_POOL: AlertItem[] = [
-  { id: 1,  type: 'wildfire',   name: 'Sierra Nevada Complex',     severity: 'Critical', location: '37.8°N, 119.5°W',  time: 'Just now' },
-  { id: 2,  type: 'earthquake', name: 'Tōhoku Seismic Event',      severity: 'Critical', location: '38.3°N, 142.4°E',  time: '12s ago' },
-  { id: 3,  type: 'flood',      name: 'Mekong Delta Surge',        severity: 'High',     location: '10.0°N, 105.8°E',  time: '34s ago' },
-  { id: 4,  type: 'volcano',    name: 'Mt. Etna Eruption',         severity: 'High',     location: '37.7°N, 15.0°E',   time: '1m ago' },
-  { id: 5,  type: 'storm',      name: 'Cyclone Anaya',             severity: 'Critical', location: '14.5°N, 67.2°E',   time: '2m ago' },
-  { id: 6,  type: 'wildfire',   name: 'Amazon Basin Ignition',     severity: 'High',     location: '3.1°S, 60.0°W',    time: '3m ago' },
-  { id: 7,  type: 'earthquake', name: 'Chilean Subduction Quake',  severity: 'Medium',   location: '33.4°S, 70.6°W',   time: '4m ago' },
-  { id: 8,  type: 'flood',      name: 'Rhine Overflow Alert',      severity: 'Medium',   location: '51.2°N, 6.8°E',    time: '5m ago' },
-  { id: 9,  type: 'storm',      name: 'Typhoon Kiko',              severity: 'High',     location: '22.3°N, 131.5°E',  time: '6m ago' },
-  { id: 10, type: 'volcano',    name: 'Kilauea Lava Flow',         severity: 'Medium',   location: '19.4°N, 155.3°W',  time: '7m ago' },
-  { id: 11, type: 'wildfire',   name: 'Australian Bushfire',       severity: 'Critical', location: '33.9°S, 151.2°E',  time: '8m ago' },
-  { id: 12, type: 'earthquake', name: 'Istanbul Tremor',           severity: 'High',     location: '41.0°N, 28.9°E',   time: '9m ago' },
-];
-
-/* ─── map marker positions (percentage of map area) ─── */
-const MAP_MARKERS = [
-  { id: 'm1', type: 'wildfire',   x: 15, y: 38, alertId: 1  },
-  { id: 'm2', type: 'earthquake', x: 82, y: 32, alertId: 2  },
-  { id: 'm3', type: 'flood',      x: 75, y: 55, alertId: 3  },
-  { id: 'm4', type: 'volcano',    x: 52, y: 36, alertId: 4  },
-  { id: 'm5', type: 'storm',      x: 65, y: 48, alertId: 5  },
-  { id: 'm6', type: 'wildfire',   x: 32, y: 62, alertId: 6  },
-  { id: 'm7', type: 'earthquake', x: 26, y: 72, alertId: 7  },
-  { id: 'm8', type: 'flood',      x: 50, y: 30, alertId: 8  },
-  { id: 'm9', type: 'storm',      x: 88, y: 40, alertId: 9  },
-  { id: 'm10', type: 'volcano',   x: 10, y: 50, alertId: 10 },
-];
-
-/* ─── severity helpers ─── */
-function severityColor(s: string) {
-  if (s === 'Critical') return 'bg-red-500/20 text-red-400 border-red-500/30';
-  if (s === 'High') return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-  return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-}
-
-/* ─── feature pills data ─── */
-const FEATURE_PILLS = [
-  'Flood Monitoring',
-  'Wildfire Tracking',
-  'Earthquake Alerts',
-  'Volcanic Activity',
-  'Storm Events',
-];
-
-/* ═══════════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════════════════════════ */
-
-export function DisasterIntelligenceSection() {
-  /* ── scrolling alert feed ── */
-  const [visibleAlerts, setVisibleAlerts] = useState<AlertItem[]>([ALERT_POOL[0]]);
+// ── Globe ─────────────────────────────────────────────────────────────────────
+function GlobeCanvas({
+  markerRefs,
+  activeIdxRef,
+}: {
+  markerRefs:   React.RefObject<(HTMLDivElement | null)[]>;
+  activeIdxRef: React.MutableRefObject<number>;
+}) {
+  const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let idx = 1;
-    const interval = setInterval(() => {
-      if (idx < ALERT_POOL.length) {
-        setVisibleAlerts((prev) => [ALERT_POOL[idx], ...prev].slice(0, 8));
-        idx++;
-      } else {
-        idx = 0; // loop
-      }
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    const el = mountRef.current;
+    if (!el) return;
+    el.querySelectorAll('canvas').forEach(c => c.remove());
 
-  /* ── threat gauge animated value ── */
-  const [threatLevel, setThreatLevel] = useState(72);
-  useEffect(() => {
-    const t = setInterval(() => {
-      setThreatLevel((prev) => {
-        const delta = Math.floor(Math.random() * 7) - 3;
-        return Math.max(55, Math.min(95, prev + delta));
+    const R = 3.0;
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    Object.assign(renderer.domElement.style, {
+      position: 'absolute', top: '0', left: '0',
+      width: '100%', height: '100%', zIndex: '0', pointerEvents: 'none',
+    });
+    el.appendChild(renderer.domElement);
+
+    const earth = new THREE.Mesh(
+      new THREE.SphereGeometry(R, 64, 64),
+      new THREE.MeshStandardMaterial({
+        map: new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg'),
+        roughness: 0.85, metalness: 0.1,
+      }),
+    );
+    // Initial rotation positioning (focus on East Asia / Bangladesh)
+    earth.rotation.y = 270 * Math.PI / 180;
+    earth.rotation.z = 23.5 * Math.PI / 180; // axial tilt
+    scene.add(earth);
+
+    // Atmosphere glow
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(R * 1.1, 64, 64),
+      new THREE.ShaderMaterial({
+        vertexShader:   `varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+        fragmentShader: `varying vec3 vN;void main(){float i=pow(.55-dot(vN,vec3(0,0,1)),2.);gl_FragColor=vec4(.15,.4,.9,1.)*i*.7;}`,
+        blending: THREE.AdditiveBlending, side: THREE.BackSide, transparent: true,
+      }),
+    ));
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+    const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+    sun.position.set(5, 3, 5);
+    scene.add(sun);
+
+    const localPositions = EVENTS.map(e => latLonTo3D(e.lat, e.lon, R));
+    const _worldPos  = new THREE.Vector3();
+    const _projected = new THREE.Vector3();
+    const R2 = R * R; // visibility threshold
+
+    // Park markers offscreen initially
+    if (markerRefs.current) {
+      markerRefs.current.forEach(markerEl => {
+        if (markerEl) {
+          markerEl.style.left = '-999px';
+          markerEl.style.top  = '-999px';
+        }
       });
-    }, 2500);
-    return () => clearInterval(t);
-  }, []);
+    }
 
-  /* ── active events ticker ── */
-  const [activeEvents, setActiveEvents] = useState(23);
+    let raf: number;
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      
+      // Rotates slightly faster: changed speed from 0.0010 to 0.0035
+      earth.rotation.y += 0.0035;
+      renderer.render(scene, camera);
+
+      if (!markerRefs.current) return;
+
+      EVENTS.forEach((event, idx) => {
+        const markerEl = markerRefs.current[idx];
+        if (!markerEl) return;
+
+        _worldPos.copy(localPositions[idx]).applyEuler(earth.rotation);
+
+        // Surface point is visible when dot(worldPos, camPos) > R²
+        const isFront = _worldPos.dot(camera.position) > R2;
+
+        markerEl.style.opacity = isFront ? '1' : '0';
+        if (!isFront) {
+          markerEl.style.left = '-999px';
+          return;
+        }
+
+        _projected.copy(_worldPos).project(camera);
+        markerEl.style.left = `${((_projected.x + 1) / 2) * window.innerWidth}px`;
+        markerEl.style.top  = `${((-_projected.y + 1) / 2) * window.innerHeight}px`;
+      });
+    };
+    tick();
+
+    const onResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+      renderer.dispose();
+      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+    };
+  }, [markerRefs, activeIdxRef]);
+
+  return <div ref={mountRef} className="absolute inset-0 z-0" />;
+}
+
+// ── Section ───────────────────────────────────────────────────────────────────
+export function DisasterIntelligenceSection() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const activeIdxRef = useRef(0);
+  const markerRefs   = useRef<(HTMLDivElement | null)[]>([]);
+
   useEffect(() => {
-    const t = setInterval(() => {
-      setActiveEvents((p) => p + (Math.random() > 0.5 ? 1 : -1));
-    }, 4000);
-    return () => clearInterval(t);
+    const id = setInterval(() => {
+      setActiveIdx(prev => {
+        const next = (prev + 1) % EVENTS.length;
+        activeIdxRef.current = next;
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(id);
   }, []);
-
-  const threatArc = useMemo(() => {
-    const pct = threatLevel / 100;
-    const angle = pct * 180;
-    const rad = (angle * Math.PI) / 180;
-    const r = 40;
-    const cx = 50;
-    const cy = 45;
-    const x = cx - r * Math.cos(rad);
-    const y = cy - r * Math.sin(rad);
-    const largeArc = angle > 180 ? 1 : 0;
-    return `M ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${x.toFixed(2)} ${y.toFixed(2)}`;
-  }, [threatLevel]);
 
   return (
-    <SectionWrapper
+    <section
       id="disaster-intelligence"
-      index={4}
-      totalSections={10}
-      label="Crisis Response"
-      title="Earth Events & Disaster Intelligence"
-      description="Monitor global natural disasters in real-time powered by NASA EONET feeds. Track floods, wildfires, volcanic activity, earthquakes, and storm events with intelligent alerting."
-      accentColor="#ef4444"
+      className="relative w-full h-screen overflow-hidden flex flex-col justify-end pb-24 px-8 md:px-16 lg:px-24 bg-black"
     >
-      {/* ─── main grid ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <GlobeCanvas markerRefs={markerRefs} activeIdxRef={activeIdxRef} />
 
-        {/* ═══ LEFT: World Map Panel (3 cols) ═══ */}
-        <div className="lg:col-span-3 liquid-glass rounded-2xl border border-white/5 overflow-hidden relative">
-          {/* panel header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-2 h-2 rounded-full bg-red-500"
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <span className="font-mono text-xs text-white/60 tracking-wider uppercase">
-                Global Threat Map — Live
-              </span>
-            </div>
-            <span className="font-mono text-[10px] text-red-400/80 tracking-widest">EONET FEED</span>
-          </div>
+      {/* Vignette */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 85% 85% at 50% 45%, transparent 30%, rgba(0,0,8,0.55) 65%, rgba(0,0,0,0.92) 100%)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent z-10 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-black to-transparent z-10 pointer-events-none" />
 
-          {/* map area */}
-          <div className="relative w-full aspect-[2/1] min-h-[320px] bg-[#050a14]">
-            {/* grid lines */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage:
-                  'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-                backgroundSize: '10% 10%',
-              }}
-            />
+      {/* All markers rendering simultaneously on the rotating globe */}
+      {EVENTS.map((item, idx) => {
+        const MarkerIcon = item.Icon;
+        const isActive = idx === activeIdx;
+        const coordinateString = getCoordinateString(item.lat, item.lon);
 
-            {/* Stylised world map SVG (simplified continents) */}
-            <svg
-              viewBox="0 0 200 100"
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              {/* Equator + Tropics */}
-              <line x1="0" y1="50" x2="200" y2="50" stroke="rgba(255,255,255,0.06)" strokeWidth="0.3" strokeDasharray="2 2" />
-              <line x1="0" y1="27" x2="200" y2="27" stroke="rgba(255,255,255,0.04)" strokeWidth="0.2" strokeDasharray="1 3" />
-              <line x1="0" y1="73" x2="200" y2="73" stroke="rgba(255,255,255,0.04)" strokeWidth="0.2" strokeDasharray="1 3" />
-
-              {/* North America */}
-              <path
-                d="M20,20 L35,18 L42,22 L44,30 L40,38 L34,42 L28,40 L22,35 L18,28 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* South America */}
-              <path
-                d="M38,50 L44,48 L48,55 L50,65 L46,78 L40,82 L36,74 L34,60 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* Europe */}
-              <path
-                d="M88,18 L100,16 L106,20 L104,28 L96,32 L90,30 L86,24 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* Africa */}
-              <path
-                d="M90,36 L102,34 L108,42 L110,55 L106,68 L98,74 L90,70 L86,56 L88,44 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* Asia */}
-              <path
-                d="M110,14 L140,12 L160,18 L168,28 L164,38 L150,44 L136,42 L124,38 L116,32 L108,24 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* India */}
-              <path
-                d="M130,38 L138,36 L142,44 L138,54 L132,52 L128,44 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-              {/* Australia */}
-              <path
-                d="M154,60 L172,58 L178,64 L176,74 L166,78 L156,74 L152,66 Z"
-                fill="rgba(255,255,255,0.04)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.4"
-              />
-            </svg>
-
-            {/* ── Pulsing disaster markers ── */}
-            {MAP_MARKERS.map((marker, i) => {
-              const dt = DISASTER_TYPES[marker.type];
-              return (
-                <motion.div
-                  key={marker.id}
-                  className="absolute flex items-center justify-center"
-                  style={{ left: `${marker.x}%`, top: `${marker.y}%`, transform: 'translate(-50%, -50%)' }}
-                  initial={{ scale: 0, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.15, type: 'spring', stiffness: 260, damping: 20 }}
-                >
-                  {/* outer pulse ring */}
-                  <motion.div
-                    className="absolute rounded-full"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      border: `1px solid ${dt.color}`,
-                      opacity: 0.3,
-                    }}
-                    animate={{ scale: [1, 2.2], opacity: [0.4, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-                  />
-                  {/* second pulse */}
-                  <motion.div
-                    className="absolute rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      border: `1px solid ${dt.color}`,
-                      opacity: 0.2,
-                    }}
-                    animate={{ scale: [1, 1.8], opacity: [0.3, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 + 0.4 }}
-                  />
-                  {/* core dot */}
-                  <motion.div
-                    className="relative z-10 rounded-full flex items-center justify-center"
-                    style={{
-                      width: 18,
-                      height: 18,
-                      backgroundColor: `${dt.color}30`,
-                      border: `1.5px solid ${dt.color}`,
-                      boxShadow: `0 0 12px ${dt.color}60`,
-                    }}
-                    animate={{ scale: [1, 1.15, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
-                  >
-                    <span style={{ color: dt.color }} className="flex items-center justify-center">
-                      {dt.icon}
-                    </span>
-                  </motion.div>
-                </motion.div>
-              );
-            })}
-
-            {/* subtle scan-line sweep */}
-            <motion.div
-              className="absolute top-0 left-0 w-full h-[1px] pointer-events-none"
-              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.25) 50%, transparent 100%)' }}
-              animate={{ top: ['0%', '100%'] }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-            />
-          </div>
-        </div>
-
-        {/* ═══ RIGHT: Alert Feed + Gauge (2 cols) ═══ */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-
-          {/* ── Threat Level Gauge ── */}
-          <div className="liquid-glass rounded-2xl border border-white/5 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield size={14} className="text-red-400" />
-              <span className="font-mono text-xs text-white/60 tracking-wider uppercase">Threat Level</span>
-            </div>
-
-            <div className="flex items-end justify-between">
-              {/* gauge SVG */}
-              <svg viewBox="0 0 100 55" className="w-32 h-auto">
-                {/* track */}
-                <path
-                  d="M 10 45 A 40 40 0 0 1 90 45"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.08)"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                />
-                {/* value arc */}
-                <motion.path
-                  d={threatArc}
-                  fill="none"
-                  stroke="#ef4444"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 1.2, ease: 'easeOut' }}
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))' }}
-                />
-                {/* needle dot */}
-                <motion.circle
-                  cx={50 - 40 * Math.cos((threatLevel / 100) * Math.PI)}
-                  cy={45 - 40 * Math.sin((threatLevel / 100) * Math.PI)}
-                  r="3"
-                  fill="#ef4444"
-                  style={{ filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.8))' }}
-                  animate={{ r: [3, 4, 3] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-              </svg>
-
-              {/* numeric readout */}
-              <div className="text-right">
-                <motion.span
-                  key={threatLevel}
-                  className="text-3xl font-mono font-bold text-red-400"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {threatLevel}
-                </motion.span>
-                <span className="text-sm font-mono text-white/40 ml-1">/ 100</span>
-                <div className="mt-1">
-                  <span className={`text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                    threatLevel >= 80
-                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                      : threatLevel >= 65
-                        ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                        : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                  }`}>
-                    {threatLevel >= 80 ? 'SEVERE' : threatLevel >= 65 ? 'ELEVATED' : 'MODERATE'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Alert Feed ── */}
-          <div className="liquid-glass rounded-2xl border border-white/5 flex-1 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                >
-                  <Radio size={13} className="text-red-400" />
-                </motion.div>
-                <span className="font-mono text-xs text-white/60 tracking-wider uppercase">Live Alert Feed</span>
-              </div>
-              <span className="font-mono text-[10px] text-red-400/70">{visibleAlerts.length} events</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[340px] scrollbar-thin scrollbar-thumb-white/10">
-              <AnimatePresence initial={false}>
-                {visibleAlerts.map((alert) => {
-                  const dt = DISASTER_TYPES[alert.type];
-                  return (
-                    <motion.div
-                      key={alert.id}
-                      layout
-                      initial={{ opacity: 0, x: 30, height: 0 }}
-                      animate={{ opacity: 1, x: 0, height: 'auto' }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.4, ease: 'easeOut' }}
-                      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 flex items-center gap-3 group hover:border-white/10 transition-colors"
-                    >
-                      {/* icon */}
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${dt.color}18`, border: `1px solid ${dt.color}30` }}
-                      >
-                        <span style={{ color: dt.color }}>{dt.icon}</span>
-                      </div>
-                      {/* info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-white truncate">{alert.name}</span>
-                          <span
-                            className={`text-[9px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-full border shrink-0 ${severityColor(alert.severity)}`}
-                          >
-                            {alert.severity}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <MapPin size={10} className="text-white/30" />
-                          <span className="font-mono text-[10px] text-white/40">{alert.location}</span>
-                          <span className="text-white/15 mx-1">|</span>
-                          <span className="font-mono text-[10px] text-white/30">{alert.time}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Stats Row ─── */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
-        {[
-          { label: 'Active Events', value: activeEvents, icon: <Activity size={14} className="text-red-400" /> },
-          { label: 'Monitoring',    value: '147 Zones',  icon: <MapPin size={14} className="text-red-400" /> },
-          { label: 'Alerts Issued', value: 12,            icon: <AlertTriangle size={14} className="text-red-400" /> },
-        ].map((stat) => (
+        return (
           <div
-            key={stat.label}
-            className="liquid-glass rounded-xl border border-white/5 px-5 py-4 flex items-center gap-3"
+            key={item.id}
+            ref={el => { markerRefs.current[idx] = el; }}
+            className="absolute z-20 transition-opacity duration-700 pointer-events-none"
+            style={{ transform: 'translate(-50%,-50%)' }}
           >
-            <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-              {stat.icon}
-            </div>
-            <div>
-              <div className="font-mono text-lg text-white font-semibold leading-none">
-                {typeof stat.value === 'number' ? (
-                  <motion.span
-                    key={stat.value}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {stat.value}
-                  </motion.span>
-                ) : (
-                  stat.value
-                )}
-              </div>
-              <span className="text-[11px] text-white/40 tracking-wide">{stat.label}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ─── Feature Pills ─── */}
-      <div className="flex flex-wrap gap-2 mt-5">
-        {FEATURE_PILLS.map((pill, i) => {
-          const typeKey = Object.keys(DISASTER_TYPES)[i % Object.keys(DISASTER_TYPES).length];
-          const dt = DISASTER_TYPES[typeKey];
-          return (
+            {/* Pulse rings */}
             <motion.span
-              key={pill}
-              className="liquid-glass rounded-full px-3 py-1.5 text-xs font-mono tracking-wide border border-white/5 flex items-center gap-1.5 cursor-default"
-              whileHover={{ scale: 1.05, borderColor: `${dt.color}40` }}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-            >
-              <span style={{ color: dt.color }}>{dt.icon}</span>
-              <span className="text-white/70">{pill}</span>
-            </motion.span>
-          );
-        })}
-      </div>
-    </SectionWrapper>
+              className="absolute rounded-full border"
+              style={{ borderColor: item.color, width: 30, height: 30, top: '50%', left: '50%', translateX: '-50%', translateY: '-50%' }}
+              animate={{ scale: [1, 2.6], opacity: [0.8, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+            />
+            <motion.span
+              className="absolute rounded-full border"
+              style={{ borderColor: item.color, width: 30, height: 30, top: '50%', left: '50%', translateX: '-50%', translateY: '-50%' }}
+              animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: 0.4 }}
+            />
+
+            {/* Core dot */}
+            <motion.span
+              className="relative block rounded-full"
+              style={{ backgroundColor: item.color, width: 10, height: 10 }}
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+
+            {/* Event card (only shows detail card for the active index event) */}
+            <AnimatePresence mode="wait">
+              {isActive && (
+                <motion.div
+                  className="absolute left-5 bottom-5 whitespace-nowrap pointer-events-none"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{    opacity: 0, y: 5 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <div
+                    className="px-3 py-2.5 rounded-xl font-body backdrop-blur-xl"
+                    style={{
+                      background: 'rgba(4,4,14,0.88)',
+                      border:     `1px solid ${item.color}30`,
+                      boxShadow:  `0 0 18px ${item.color}14`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <MarkerIcon size={11} style={{ color: item.color }} strokeWidth={2.5} />
+                      <span className="font-semibold text-white" style={{ fontSize: '11px', letterSpacing: '0.05em' }}>
+                        {item.label}
+                      </span>
+                    </div>
+                    {/* Precise coordinates of the event instead of the country name */}
+                    <div className="text-slate-400 font-mono" style={{ fontSize: '10px' }}>
+                      {coordinateString}
+                    </div>
+                    <div style={{ color: item.color, fontSize: '10px', opacity: 0.8, marginTop: 2 }}>{item.time}</div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
+
+      {/* Foreground content */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="relative z-30 w-full max-w-4xl flex flex-col items-start text-left"
+      >
+        <h2 className="text-5xl md:text-7xl font-heading italic text-white leading-tight tracking-tight mb-6">
+          Disaster Intelligence
+        </h2>
+        <p className="text-lg md:text-xl text-slate-300 font-body font-light leading-relaxed max-w-2xl mb-8">
+          Monitor global natural disasters in real-time. Track wildfires, floods, volcanic activity, and storm systems as they emerge — anywhere on Earth.
+        </p>
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+          className="group px-6 py-3 text-sm font-medium text-white font-body rounded-full border border-white/20 hover:border-white/50 hover:bg-white hover:text-black transition-all duration-300 flex items-center gap-2 cursor-pointer bg-white/5 backdrop-blur-sm"
+        >
+          Monitor Events
+          <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+          </svg>
+        </motion.button>
+      </motion.div>
+
+      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-30" />
+    </section>
   );
 }

@@ -62,8 +62,8 @@ export function LaunchMonitoringSection() {
         </motion.button>
       </motion.div>
 
-      {/* Bottom separator */}
-      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-20" />
+      {/* Gradient fade to black at the bottom to blend with the next section */}
+      <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none" />
     </section>
   );
 }
