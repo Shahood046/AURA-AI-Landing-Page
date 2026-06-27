@@ -4,7 +4,6 @@ import { BlurText } from './BlurText';
 import { WovenCanvas } from './ui/woven-light-hero';
 
 // Sections in exact user-specified order
-import { SatelliteTrackingSection } from './sections/SatelliteTrackingSection';
 import { LaunchMonitoringSection } from './sections/LaunchMonitoringSection';
 import { DisasterIntelligenceSection } from './sections/DisasterIntelligenceSection';
 import { AirTrafficSection } from './sections/AirTrafficSection';
@@ -86,9 +85,6 @@ export function ThemeLandingPage() {
       </section>
 
       {/* --- STORY SECTIONS (User's exact order) --- */}
-      {/* 2. Satellite Tracking System */}
-      <SatelliteTrackingSection />
-
       {/* 3. Live Launch Monitor */}
       <LaunchMonitoringSection />
 
