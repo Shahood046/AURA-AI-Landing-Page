@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "Instrument Serif", serif;
+  --font-body: "Barlow", sans-serif;
+}
+
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.liquid-glass {
+  background: rgba(255,255,255,0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-glass::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.45) 0%,
+    rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0) 40%,
+    rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.15) 80%,
+    rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.liquid-glass-strong {
+  background: rgba(255,255,255,0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+  border: none;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+}
+
+.liquid-glass-strong::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.5) 0%,
+    rgba(255,255,255,0.2) 20%,
+    rgba(255,255,255,0) 40%,
+    rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.2) 80%,
+    rgba(255,255,255,0.5) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Air Traffic Control: runway & aircraft ambience ───────────────────── */
+@keyframes atc-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
+}
+/* White anti-collision strobe — sharp double flash */
+@keyframes atc-strobe {
+  0%, 88%, 100% { opacity: 0; }
+  90%           { opacity: 1; }
+  92%           { opacity: 0.1; }
+  94%           { opacity: 1; }
+  96%           { opacity: 0; }
+}
+/* Slow drifting atmospheric haze */
+@keyframes atc-haze {
+  0%   { transform: translateX(-2%); opacity: 0.16; }
+  50%  { transform: translateX(2%);  opacity: 0.30; }
+  100% { transform: translateX(-2%); opacity: 0.16; }
+}
+/* Engine exhaust heat-shimmer */
+@keyframes atc-heat {
+  0%, 100% { transform: scaleY(1)    translateX(0);   opacity: 0.45; }
+  50%      { transform: scaleY(1.18) translateX(-2px); opacity: 0.85; }
+}
